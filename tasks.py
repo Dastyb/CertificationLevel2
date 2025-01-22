@@ -2,10 +2,12 @@ from robocorp.tasks import task
 from robocorp import browser
 from RPA.HTTP import HTTP
 from RPA.Tables import Tables
+from RPA.PDF import PDF
 
 
 http = HTTP()
 tables = Tables()
+pdf = PDF()
 
 @task
 def order_robots_from_RobotSpareBin():
@@ -63,9 +65,10 @@ def fill_the_form(order):
         browser.page().locator('input[name="address"]').fill(order["Address"])
         browser.page().locator('button:text("Preview")').click()
         submit_order(order)
+        receipt_path = store_receipt_as_pdf(order["Order number"])
 
     except Exception as e:
-        print(f"Failed to fill the form for order {order['Order ID']}. Error: {e}")
+        print(f"Failed to fill the form for order {order['Order number']}. Error: {e}")
 
 def submit_order(order):
     """Submits the robot order and retries if a server error occurs."""
@@ -84,3 +87,18 @@ def submit_order(order):
             browser.page().wait_for_timeout(1000)
         else:
             print(f"Failed to submit order after {max_retries} attempts")
+
+def store_receipt_as_pdf(order_number):
+    """Saves the order receipt as a PDF file in the output/receipts directory"""
+    try:
+        page = browser.page()
+        receipt_html = page.locator("#receipt").inner_html()
+
+        pdf = PDF()
+        pdf_file = f"output/receipts/receipt_{order_number}.pdf"
+        pdf.html_to_pdf(receipt_html, pdf_file)
+
+        return pdf_file
+    except Exception as e:
+        print(f"Failed to save receipt as PDF for order {order_number}. Error: {e}")
+        return None
