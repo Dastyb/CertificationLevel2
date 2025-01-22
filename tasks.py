@@ -12,11 +12,11 @@ pdf = PDF()
 @task
 def order_robots_from_RobotSpareBin():
     """
-    Orders robots from RobotSpareBin Industries Inc.
-    Saves the order HTML receipt as a PDF file.
-    Saves the screenshot of the ordered robot.
-    Embeds the screenshot of the robot to the PDF receipt.
-    Creates ZIP archive of the receipts and the images.
+    - Orders robots from RobotSpareBin Industries Inc.
+    - Saves the order HTML receipt as a PDF file.
+    - Saves the screenshot of the ordered robot.
+    - Embeds the screenshot of the robot to the PDF receipt.
+    - Creates ZIP archive of the receipts and the images.
     """
     open_robot_order_website()
     close_annoying_modal()
@@ -66,7 +66,9 @@ def fill_the_form(order):
         browser.page().locator('button:text("Preview")').click()
         submit_order(order)
         receipt_path = store_receipt_as_pdf(order["Order number"])
-
+        screenshot_path = screenshot_robot(order["Order number"])
+        if screenshot_path and receipt_path:
+            embed_screenshot_to_receipt(screenshot_path, receipt_path)
     except Exception as e:
         print(f"Failed to fill the form for order {order['Order number']}. Error: {e}")
 
@@ -101,4 +103,28 @@ def store_receipt_as_pdf(order_number):
         return pdf_file
     except Exception as e:
         print(f"Failed to save receipt as PDF for order {order_number}. Error: {e}")
+        return None
+
+def screenshot_robot(order_number):
+    """Takes a screenshot of the robot preview and saves it in the output/screenshots directory"""
+    try:
+        page = browser.page()
+        screenshot_file = f"output/screenshots/robot_preview_{order_number}.png"
+        robot_preview_locator = page.locator("#robot-preview-image")
+        robot_preview_locator.screenshot(path=screenshot_file)
+
+        return screenshot_file
+    except Exception as e:
+        print(f"Failed to save receipt as PDF for order {order_number}. Error: {e}")
+        return None
+
+def embed_screenshot_to_receipt(screenshot, pdf_file):
+    """Embeds the robot screenshot at the end of the receipt PDF"""
+    try:
+        pdf = PDF()
+        pdf.add_files_to_pdf([screenshot], pdf_file, append=True)
+        print(f"Screenshot embedded in PDF: {pdf_file}")
+        return pdf_file
+    except Exception as e:
+        print(f"Failed to embed screenshot in PDF {pdf_file}. Error: {e}")
         return None
