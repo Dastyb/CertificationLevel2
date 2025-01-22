@@ -17,6 +17,7 @@ def order_robots_from_RobotSpareBin():
     Creates ZIP archive of the receipts and the images.
     """
     open_robot_order_website()
+    close_annoying_modal()
     orders = get_orders()
     process_orders(orders)
 
@@ -30,8 +31,16 @@ def open_robot_order_website():
 
     browser.goto("https://robotsparebinindustries.com/#/robot-order")
 
+def close_annoying_modal():
+    """Closes the annoying modal that appears when the website is loaded."""
+    try:
+        browser.page().locator("button:has-text('OK')").click()
+
+    except Exception as e:
+        print(f"Modal not found or already closed. Error: {e}")
+
 def get_orders():
-    """Downloads the orders CSV file, reads it as a table, and returns the result."""
+    """Downloads the orders CSV file, reads it as a table, and returns the result"""
     url = "https://robotsparebinindustries.com/orders.csv"
     file_path = "orders.csv"  
     http.download(url, file_path, overwrite=True)
@@ -40,6 +49,19 @@ def get_orders():
     return orders_table
 
 def process_orders(orders):
-    """Iterates through the orders and logs each order."""
+    """Iterates through the orders and logs each order"""
     for order in orders:
         print(f"Processing order: {order}")
+        fill_the_form(order)
+
+def fill_the_form(order):
+    """Fills out the robot order form with the data from a single order"""
+    try:
+        browser.page().locator('select[name="head"]').select_option(value=order["Head"])
+        browser.page().locator(f'label[for="id-body-{order["Body"]}"]').click()
+        browser.page().locator('//input[@type="number" and @placeholder="Enter the part number for the legs"]').fill(order["Legs"])
+        browser.page().locator('input[name="address"]').fill(order["Address"])
+        browser.page().locator('button:text("Order")').click()
+
+    except Exception as e:
+        print(f"Failed to fill the form for order {order['Order ID']}. Error: {e}")
