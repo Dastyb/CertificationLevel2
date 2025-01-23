@@ -3,11 +3,12 @@ from robocorp import browser
 from RPA.HTTP import HTTP
 from RPA.Tables import Tables
 from RPA.PDF import PDF
-
+from RPA.Archive import Archive
 
 http = HTTP()
 tables = Tables()
 pdf = PDF()
+archive = Archive()
 
 @task
 def order_robots_from_RobotSpareBin():
@@ -22,6 +23,7 @@ def order_robots_from_RobotSpareBin():
     close_annoying_modal()
     orders = get_orders()
     process_orders(orders)
+    archive_path = archive_receipts()
 
 def open_robot_order_website():
     """Opens the Robot Order website using robocorp.browser."""
@@ -67,14 +69,18 @@ def fill_the_form(order):
         submit_order(order)
         receipt_path = store_receipt_as_pdf(order["Order number"])
         screenshot_path = screenshot_robot(order["Order number"])
+
         if screenshot_path and receipt_path:
             embed_screenshot_to_receipt(screenshot_path, receipt_path)
+        browser.page().locator('button:text("Order another robot")').click()
+        close_annoying_modal()
+
     except Exception as e:
         print(f"Failed to fill the form for order {order['Order number']}. Error: {e}")
 
 def submit_order(order):
     """Submits the robot order and retries if a server error occurs."""
-    max_retries = 3
+    max_retries = 7
     for attempt in range(1, max_retries + 1):
         try:
             browser.page().locator('button:text("Order")').click()
@@ -127,4 +133,18 @@ def embed_screenshot_to_receipt(screenshot, pdf_file):
         return pdf_file
     except Exception as e:
         print(f"Failed to embed screenshot in PDF {pdf_file}. Error: {e}")
+        return None
+
+def archive_receipts():
+    """Archives all receipt PDFs into a single ZIP file in the output directory"""
+    try:
+        source_dir = "output/receipts"
+        zip_file_path = "output/receipts_archive.zip"
+
+        archive.archive_folder_with_zip(source_dir, zip_file_path)
+        print(f"Receipts archived into: {zip_file_path}")
+
+        return zip_file_path
+    except Exception as e:
+        print(f"Failed to archive receipts. Error: {e}")
         return None
